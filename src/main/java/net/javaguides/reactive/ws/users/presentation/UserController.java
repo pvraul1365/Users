@@ -3,7 +3,9 @@ package net.javaguides.reactive.ws.users.presentation;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javaguides.reactive.ws.users.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,47 +29,35 @@ import reactor.core.publisher.Mono;
  */
 @RestController
 @RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
 @Slf4j
 public class UserController {
+
+    private final UserService userService;
 
     @PostMapping
     public Mono<ResponseEntity<UserRest>> createUser(@RequestBody @Valid Mono<CreateUserRequest> createUserRequest) {
         log.info("🌐 - Create User Request called with data: {}", createUserRequest);
 
-        // Simulate user creation logic (e.g., saving to database)
-        return createUserRequest
-                .map(request -> {
-                    // Simulate user creation and return a UserRest object
-                    UserRest user = UserRest.builder()
-                            .id(java.util.UUID.randomUUID())
-                            .firstName(request.getFirstName())
-                            .lastName(request.getLastName())
-                            .email(request.getEmail())
-                            .build();
-                    log.info("✅✅ - User created successfully: {}", user);
-                    return ResponseEntity
-                            .status(HttpStatus.CREATED)
-                            .location(URI.create("/api/v1/users/" + user.getId()))
-                            .body(user);
+        return userService.createUser(createUserRequest)
+                .map(userRest -> {
+                    log.info("✅ - User created successfully: {}", userRest);
+                    return ResponseEntity.created(URI.create("/api/v1/users/" + userRest.getId())).body(userRest);
                 })
                 .doOnError(error -> log.error("❌ - Error creating user: {}", error.getMessage()));
     }
 
     @GetMapping("/{userId}")
-    public Mono<UserRest> getUser(@PathVariable("userId") final UUID userId) {
+    public Mono<ResponseEntity<UserRest>> getUser(@PathVariable("userId") final UUID userId) {
         log.info("🌐 - Get User Request called with id: {}", userId);
 
-        // Simulate fetching user logic (e.g., retrieving from database)
-        // For demonstration, we will just log the request and return a dummy user
-        final UserRest user = UserRest.builder()
-                .id(userId)
-                .firstName("John")
-                .lastName("Doe")
-                .email("john@gmail.com")
-                .build();
+        return userService.getUserById(userId)
+                .map(userRest -> {
+                    log.info("✅ - User retrieved successfully: {}", userRest);
+                    return ResponseEntity.ok(userRest);
+                })
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
 
-        log.info("✅✅ - User fetched successfully: {}", user);
-        return Mono.just(user);
     }
 
     @GetMapping
