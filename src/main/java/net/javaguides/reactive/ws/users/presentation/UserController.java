@@ -41,10 +41,9 @@ public class UserController {
 
         return userService.createUser(createUserRequest)
                 .map(userRest -> {
-                    log.info("✅ - User created successfully: {}", userRest);
+                    log.info("✅✅ - User created successfully: {}", userRest);
                     return ResponseEntity.created(URI.create("/api/v1/users/" + userRest.getId())).body(userRest);
-                })
-                .doOnError(error -> log.error("❌ - Error creating user: {}", error.getMessage()));
+                });
     }
 
     @GetMapping("/{userId}")

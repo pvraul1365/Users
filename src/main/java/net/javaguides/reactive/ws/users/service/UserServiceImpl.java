@@ -8,9 +8,13 @@ import net.javaguides.reactive.ws.users.data.UserRepository;
 import net.javaguides.reactive.ws.users.presentation.CreateUserRequest;
 import net.javaguides.reactive.ws.users.presentation.UserRest;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -37,7 +41,8 @@ public class UserServiceImpl implements UserService {
         return createUserRequestMono
                 .mapNotNull(this::convertToEntity)
                 .flatMap(userRepository::save)
-                .mapNotNull(this::convertToRest);
+                .mapNotNull(this::convertToRest)
+                .doOnSuccess(userRest -> log.info("✅ - User created successfully: {}", userRest));
     }
 
     @Override
