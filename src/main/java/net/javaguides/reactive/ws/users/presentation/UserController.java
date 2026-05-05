@@ -61,27 +61,15 @@ public class UserController {
     }
 
     @GetMapping
-    public Flux<UserRest> getUsers(@RequestParam(value = "offset", defaultValue = "0") final Integer offset,
-                                   @RequestParam(value = "limit", defaultValue = "50") final Integer limit) {
+    public Flux<UserRest> getUsers(@RequestParam(value = "page", defaultValue = "0") final int page,
+                                   @RequestParam(value = "limit", defaultValue = "50") final int limit) {
         log.info("🌐 - Get Users Request called");
 
         // Simulate fetching all users logic (e.g., retrieving from database)
         // For demonstration, we will just log the request
-        return Flux.just(
-                        UserRest.builder()
-                                .id(UUID.randomUUID())
-                                .firstName("John")
-                                .lastName("Doe")
-                                .email("john@gmail")
-                                .build(),
-                        UserRest.builder()
-                                .id(UUID.randomUUID())
-                                .firstName("Jane")
-                                .lastName("Smith")
-                                .email("jane@gmail")
-                                .build()
-                ).doOnNext(user -> log.info("📋 - User: {}", user))
-                .doOnComplete(() -> log.info("✅✅ - All users fetched successfully"))
+        return userService.findAll(page, limit)
+                .doOnNext(user -> log.info("📋 - User: {}", user))
+                .doOnComplete(() -> log.info("✅ - All users fetched successfully"))
                 .doOnError(error -> log.error("❌ - Error fetching users: {}", error.getMessage()));
     }
 }
