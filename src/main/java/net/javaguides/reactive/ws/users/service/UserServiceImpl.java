@@ -1,21 +1,20 @@
 package net.javaguides.reactive.ws.users.service;
 
+import java.util.ArrayList;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javaguides.reactive.ws.users.data.UserEntity;
 import net.javaguides.reactive.ws.users.data.UserRepository;
-import net.javaguides.reactive.ws.users.presentation.CreateUserRequest;
-import net.javaguides.reactive.ws.users.presentation.UserRest;
+import net.javaguides.reactive.ws.users.presentation.model.CreateUserRequest;
+import net.javaguides.reactive.ws.users.presentation.model.UserRest;
 import org.springframework.beans.BeanUtils;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -83,5 +82,16 @@ public class UserServiceImpl implements UserService {
         UserRest userRest = new UserRest();
         BeanUtils.copyProperties(userEntity, userRest);
         return userRest;
+    }
+
+    @Override
+    public Mono<UserDetails> findByUsername(final String username) {
+        return userRepository.findByEmail(username)
+                .map(userEntity ->
+                        // Here you would convert your UserEntity to a UserDetails implementation
+                        User.withUsername(userEntity.getEmail())
+                                .password(userEntity.getPassword())
+                                .authorities(new ArrayList<>())
+                                .build());
     }
 }

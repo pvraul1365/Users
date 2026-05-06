@@ -1,4 +1,4 @@
-package net.javaguides.reactive.ws.users.presentation;
+package net.javaguides.reactive.ws.users.presentation.model;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
