@@ -13,10 +13,12 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * UserServiceImpl
@@ -33,13 +35,14 @@ import reactor.core.publisher.Mono;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public Mono<UserRest> createUser(Mono<CreateUserRequest> createUserRequestMono) {
         log.info("📥 - UserServiceImpl.createUser called with data: {}", createUserRequestMono);
 
         return createUserRequestMono
-                .mapNotNull(this::convertToEntity)
+                .flatMap(this::convertToEntity)
                 .flatMap(userRepository::save)
                 .mapNotNull(this::convertToRest)
                 .doOnSuccess(userRest -> log.info("✅ - User created successfully: {}", userRest));
@@ -58,7 +61,7 @@ public class UserServiceImpl implements UserService {
         log.info("📥 - UserServiceImpl.findAll called with page: {}, size: {}", page, size);
 
         if (page > 0) {
-            page = page -1;
+            page = page - 1;
         }
         Pageable pageable = PageRequest.of(page, size);
         return userRepository.findAllBy(pageable)
@@ -66,15 +69,19 @@ public class UserServiceImpl implements UserService {
 
     }
 
-    private UserEntity convertToEntity(final CreateUserRequest createUserRequest){
-        UserEntity userEntity = new UserEntity();
-        BeanUtils.copyProperties(createUserRequest,userEntity);
-        return userEntity;
+    private Mono<UserEntity> convertToEntity(final CreateUserRequest createUserRequest) {
+        // Password encoding can be CPU intensive, so we offload it to a separate thread using boundedElastic scheduler for non-blocking behavior.
+        return Mono.fromCallable(() -> {
+            UserEntity userEntity = new UserEntity();
+            BeanUtils.copyProperties(createUserRequest, userEntity);
+            userEntity.setPassword(passwordEncoder.encode(createUserRequest.getPassword()));
+            return userEntity;
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    private UserRest convertToRest(final UserEntity userEntity){
+    private UserRest convertToRest(final UserEntity userEntity) {
         UserRest userRest = new UserRest();
-        BeanUtils.copyProperties(userEntity,userRest);
+        BeanUtils.copyProperties(userEntity, userRest);
         return userRest;
     }
 }
