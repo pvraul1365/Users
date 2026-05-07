@@ -3,6 +3,7 @@ package net.javaguides.reactive.ws.users.infrastructure;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -61,6 +62,17 @@ public class GlobalExceptionHandler {
                 )
                 .build());
 
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public Mono<ErrorResponse> handleBadCredentialsException(BadCredentialsException exception) {
+        log.error("❌ - BadCredentialsException occurred: {}", exception.getMessage());
+        return Mono.just(ErrorResponse.builder(
+                        exception,
+                        HttpStatus.UNAUTHORIZED,
+                        "Invalid email or password"
+                )
+                .build());
     }
 
 }
