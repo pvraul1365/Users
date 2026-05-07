@@ -1,5 +1,7 @@
 package net.javaguides.reactive.ws.users.service;
 
+import reactor.core.publisher.Mono;
+
 /**
  * Created by ij, Spring Framework Guru.
  *
@@ -11,4 +13,7 @@ public interface JwtService {
 
     String generateToken(String subject); // userId
 
+    Mono<Boolean> validateJwt(String token);
+
+    String extractTokenSubject(String token);
 }

@@ -1,11 +1,13 @@
 package net.javaguides.reactive.ws.users.service;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.time.Instant;
@@ -34,6 +36,27 @@ public class JwtServiceImpl implements JwtService {
                 .expiration(Date.from(Instant.now().plus(1, ChronoUnit.HOURS)))
                 .signWith(this.getSigningKey())
                 .compact();
+    }
+
+    @Override
+    public Mono<Boolean> validateJwt(final String token) {
+        return Mono.just(token)
+                .map(jwt -> parseToken(jwt))
+                .map(claims -> claims.getExpiration().after(new Date()))
+                .onErrorReturn(false);
+    }
+
+    @Override
+    public String extractTokenSubject(final String token) {
+        return this.parseToken(token).getSubject();
+    }
+
+    private Claims parseToken(String token) {
+        return Jwts.parser()
+                .verifyWith(this.getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getPayload();
     }
 
     private SecretKey getSigningKey() {
