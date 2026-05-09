@@ -6,10 +6,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javaguides.reactive.ws.users.data.UserEntity;
 import net.javaguides.reactive.ws.users.data.UserRepository;
+import net.javaguides.reactive.ws.users.presentation.model.UserRest;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 /**
  * AuthenticationServiceImpl

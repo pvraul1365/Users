@@ -2,12 +2,14 @@ package net.javaguides.reactive.ws.users.presentation;
 
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Duration;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javaguides.reactive.ws.users.presentation.model.CreateUserRequest;
 import net.javaguides.reactive.ws.users.presentation.model.UserRest;
 import net.javaguides.reactive.ws.users.service.UserService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -75,5 +77,12 @@ public class UserController {
                 .doOnNext(user -> log.info("📋 - User: {}", user))
                 .doOnComplete(() -> log.info("✅ - All users fetched successfully"))
                 .doOnError(error -> log.error("❌ - Error fetching users: {}", error.getMessage()));
+    }
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<UserRest> streamUsers() {
+        log.info("🌐 - Stream Users Request called");
+
+        return userService.streamUser();
     }
 }

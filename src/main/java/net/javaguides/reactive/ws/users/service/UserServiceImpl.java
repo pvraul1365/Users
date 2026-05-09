@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 /**
@@ -35,6 +36,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Sinks.Many<UserRest> usersSink;
 
     @Override
     public Mono<UserRest> createUser(Mono<CreateUserRequest> createUserRequestMono) {
@@ -44,7 +46,10 @@ public class UserServiceImpl implements UserService {
                 .flatMap(this::convertToEntity)
                 .flatMap(userRepository::save)
                 .mapNotNull(this::convertToRest)
-                .doOnSuccess(userRest -> log.info("✅ - User created successfully: {}", userRest));
+                .doOnSuccess(saveUser -> {
+                    log.info("✅ - User created successfully: {}", saveUser);
+                    usersSink.tryEmitNext(saveUser);
+                });
     }
 
     @Override
@@ -66,6 +71,16 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAllBy(pageable)
                 .mapNotNull(this::convertToRest);
 
+    }
+
+    @Override
+    public Flux<UserRest> streamUser() {
+        return usersSink.asFlux()
+                .doOnSubscribe(subscription -> log.info("📥 - UserServiceImpl.streamUser subscribed"))
+                .doOnNext(userRest -> log.info("📤 - UserServiceImpl.streamUser emitted: {}", userRest))
+                .doOnCancel(() -> log.info("📤 - UserServiceImpl.streamUser subscription cancelled"))
+                .publish()
+                .autoConnect(1);
     }
 
     private Mono<UserEntity> convertToEntity(final CreateUserRequest createUserRequest) {
