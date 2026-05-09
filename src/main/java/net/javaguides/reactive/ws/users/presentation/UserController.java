@@ -9,6 +9,8 @@ import net.javaguides.reactive.ws.users.presentation.model.CreateUserRequest;
 import net.javaguides.reactive.ws.users.presentation.model.UserRest;
 import net.javaguides.reactive.ws.users.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,6 +50,8 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
+    @PreAuthorize("authentication.principal.equals(#userId.toString()) or hasRole('ROLE_ADMIN')")
+    //@PostAuthorize("returnObject.body != null and returnObject.body.id.toString().equals(authentication.principal)")
     public Mono<ResponseEntity<UserRest>> getUser(@PathVariable("userId") final UUID userId) {
         log.info("🌐 - Get User Request called with id: {}", userId);
 
