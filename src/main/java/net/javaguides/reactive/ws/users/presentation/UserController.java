@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -54,10 +55,12 @@ public class UserController {
     @GetMapping("/{userId}")
     @PreAuthorize("authentication.principal.equals(#userId.toString()) or hasRole('ROLE_ADMIN')")
     //@PostAuthorize("returnObject.body != null and returnObject.body.id.toString().equals(authentication.principal)")
-    public Mono<ResponseEntity<UserRest>> getUser(@PathVariable("userId") final UUID userId) {
+    public Mono<ResponseEntity<UserRest>> getUser(@PathVariable("userId") final UUID userId,
+                                                  @RequestParam(name = "include", required = false) final String include,
+                                                  @RequestHeader(name="Authorization") final String jwt) {
         log.info("🌐 - Get User Request called with id: {}", userId);
 
-        return userService.getUserById(userId)
+        return userService.getUserById(userId, include, jwt)
                 .map(userRest -> {
                     log.info("✅ - User retrieved successfully: {}", userRest);
                     return ResponseEntity.ok(userRest);

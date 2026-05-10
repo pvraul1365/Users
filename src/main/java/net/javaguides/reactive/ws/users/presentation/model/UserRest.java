@@ -1,5 +1,7 @@
 package net.javaguides.reactive.ws.users.presentation.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,5 +27,8 @@ public class UserRest {
      private String firstName;
      private String lastName;
      private String email;
+
+     @JsonInclude(JsonInclude.Include.NON_NULL)
+     private List<AlbumRest> albums;
 
 }

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javaguides.reactive.ws.users.data.UserEntity;
 import net.javaguides.reactive.ws.users.data.UserRepository;
+import net.javaguides.reactive.ws.users.presentation.model.AlbumRest;
 import net.javaguides.reactive.ws.users.presentation.model.CreateUserRequest;
 import net.javaguides.reactive.ws.users.presentation.model.UserRest;
 import org.springframework.beans.BeanUtils;
@@ -15,6 +16,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -37,6 +39,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final Sinks.Many<UserRest> usersSink;
+    private final WebClient webClient;
 
     @Override
     public Mono<UserRest> createUser(Mono<CreateUserRequest> createUserRequestMono) {
@@ -53,11 +56,47 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Mono<UserRest> getUserById(final UUID id) {
-        log.info("📥 - UserServiceImpl.getUserById called with id: {}", id);
+    public Mono<UserRest> getUserById(final UUID id, final String include, final String jwt) {
+        log.info("📥 - UserServiceImpl.getUserById called with id: {}, include: {}", id, include);
 
         return userRepository.findById(id)
-                .mapNotNull(this::convertToRest);
+                .mapNotNull(this::convertToRest)
+                .flatMap(user -> {
+                    if (include != null && include.equals("albums")) {
+                        // fetch user's photo albums from external service and set to user object
+                        return includeUserAlbums(user, jwt);
+                    }
+
+                    return Mono.just(user);
+                });
+    }
+
+    private Mono<UserRest> includeUserAlbums(UserRest user, final String jwt) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .port(8084)
+                        .path("/albums")
+                        .build())
+                .header("Authorization", jwt)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError(),
+                        clientResponse -> {
+                            return Mono.error(new RuntimeException("Albums not found for user"));
+                        })
+                .onStatus(status -> status.is5xxServerError(),
+                        clientResponse -> {
+                            return Mono.error(new RuntimeException("Server error while fetching albums"));
+                        })
+                .bodyToFlux(AlbumRest.class)
+                .collectList()
+                .map(albums -> {
+                    user.setAlbums(albums);
+                    return user;
+                })
+                .onErrorResume(error -> {
+                    log.error("❌ - Error fetching albums for user {}: {}", user.getId(), error.getMessage());
+                    return Mono.just(user); // Return user without albums if there's an error
+                });
     }
 
     @Override
