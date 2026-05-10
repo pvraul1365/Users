@@ -2,7 +2,6 @@ package net.javaguides.reactive.ws.users.presentation;
 
 import jakarta.validation.Valid;
 import java.net.URI;
-import java.time.Duration;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +10,6 @@ import net.javaguides.reactive.ws.users.presentation.model.UserRest;
 import net.javaguides.reactive.ws.users.service.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,10 +40,10 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public Mono<ResponseEntity<UserRest>> createUser(@RequestBody @Valid Mono<CreateUserRequest> createUserRequest) {
+    public Mono<ResponseEntity<UserRest>> createUser(@RequestBody @Valid CreateUserRequest createUserRequest) {
         log.info("🌐 - Create User Request called with data: {}", createUserRequest);
 
-        return userService.createUser(createUserRequest)
+        return userService.createUser(Mono.just(createUserRequest))
                 .map(userRest -> {
                     log.info("✅✅ - User created successfully: {}", userRest);
                     return ResponseEntity.created(URI.create("/api/v1/users/" + userRest.getId())).body(userRest);
@@ -57,7 +55,7 @@ public class UserController {
     //@PostAuthorize("returnObject.body != null and returnObject.body.id.toString().equals(authentication.principal)")
     public Mono<ResponseEntity<UserRest>> getUser(@PathVariable("userId") final UUID userId,
                                                   @RequestParam(name = "include", required = false) final String include,
-                                                  @RequestHeader(name="Authorization") final String jwt) {
+                                                  @RequestHeader(name = "Authorization") final String jwt) {
         log.info("🌐 - Get User Request called with id: {}", userId);
 
         return userService.getUserById(userId, include, jwt)
